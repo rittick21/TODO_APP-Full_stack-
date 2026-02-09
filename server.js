@@ -5,10 +5,11 @@ import { connectDB } from './config/db.js';
 connectDB();
 
 const port = process.env.PORT;
-if(!port) {
-    console.log("Port not found in environment variables");
+const mode = process.env.NODE_ENV;
+if(!port || !mode) {
+    console.log("Port or mode value is  not found in environment variables");
 }
 
 app.listen(port, () => {
-    console.log(`Server is running on port: ${port}`);
+    console.log(`Server is running on port: ${port} in ${mode}`);
 });

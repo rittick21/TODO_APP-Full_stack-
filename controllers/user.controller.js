@@ -1,63 +1,83 @@
 import User from "../models/user.model.js";
+import bcrypt from "bcrypt";
+import { sendTokens } from "../utils/features.js";
+import ErrorHandler from "../middlewares/error.js";
 
-const getAllUsers = async (req, res) => {
-  const users = await User.find({});
-  // console.log(req.query.keyword);
-  res.json({
-    success: true,
-    users,
-  });
+// const getAllUsers = async (req, res, next) => {
+//   try {
+//     const users = await User.find({});
+//     res.status(200).json({
+//       success: true,
+//       users,
+//     });
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
+const loginUser = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email }).select("+password");
+    if (!user) return next(new ErrorHandler("User not found", 404));
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
+      return next(new ErrorHandler("Invalid email or password", 404));
+
+    sendTokens(user, res, `Welcome back ${user.name}`, 200);
+  } catch (error) {
+    next(error);
+  }
 };
 
-const registerUser = async (req, res) => {
-  const { name, email, password } = req.body;
+const registerUser = async (req, res, next) => {
+  try {
+    const { name, email, password } = req.body;
+    let user = await User.findOne({ email });
+    if (user) return next(new ErrorHandler("User already exists", 404));
 
-  const user = await User.create({
-    name,
-    email,
-    password,
-  });
-  res.status(201).cookie("temp", "lol").json({
-    success: true,
-    message: "Signed Up Successfully",
-  });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
+
+    sendTokens(user, res, `Registered ${user.name} Successfully`, 201);
+  } catch (error) {
+    next(error);
+  }
 };
 
-const specialFunc = async (req, res) => {
-  res.json({
-    success: true,
-    message: "Just for fun",
-  });
+const getMyProfile = (req, res, next) => {
+  try {
+    res.status(200).json({
+      success: true,
+      user: req.user,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
-const getUserById = async (req, res) => {
-  const { id } = req.params;
-  const user = await User.findById(id);
-  // console.log(req.params);
-  res.json({
-    success: true,
-    user,
-  });
+const logoutUser = (req, res, next) => {
+  try {
+    res
+      .status(200)
+      .cookie("token", "", {
+        expires: new Date(Date.now()),
+        sameSite: process.env.NODE_ENV === "Development" ? "lax" : "none",
+        secure: process.env.NODE_ENV === "Development" ? false : true,
+      })
+      .json({
+        success: true,
+        user: req.user,
+      });
+  } catch (error) {
+    next(error);
+  }
 };
 
-const updateUser = async (req, res) => {
-  const { id } = req.params;
-  const updatedUser = await User.findByIdAndUpdate(id, req.body, { new: true});
-  res.json({
-    success: true,
-    message: "Updated Successfully",
-    updatedUser
-  });
-};
-
-const deleteUser = async (req, res) => {
-  const { id } = req.params;
-  const deletedUser = await User.findByIdAndDelete(id);
-  res.json({
-    success: true,
-    message: "User deleted successfully",
-    deletedUser
-  });
-};
-
-export { registerUser, getAllUsers, getUserById, specialFunc, updateUser, deleteUser };
+export { registerUser, loginUser, getMyProfile, logoutUser };
