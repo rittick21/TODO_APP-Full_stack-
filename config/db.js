@@ -16,9 +16,7 @@ export const connectDB = () => {
     .connect(MONGO_URI, {
       dbName: DATABASE,
     })
-    .then(() => {
-      console.log("Connected to MongoDB");
-    })
+    .then((c) => console.log(`Connected to MongoDB: ${c.connection.host}`))
     .catch((err) => {
       console.log("Error connecting to MongoDB", err);
     });

@@ -74,6 +74,7 @@ const logoutUser = (req, res, next) => {
       .json({
         success: true,
         user: req.user,
+        message: "Logout successfully"
       });
   } catch (error) {
     next(error);
